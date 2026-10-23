@@ -82,6 +82,23 @@ ROLLBACK;
 
 این بررسی در فاز ۷ به تست خودکار تبدیل می‌شود.
 
+## دادهٔ دمو
+
+```bash
+npm run seed:demo      # ساخت یا بازسازی دادهٔ دمو (رمز: متغیر DEMO_PASSWORD، پیش‌فرض Demo-1234!)
+```
+
+| رستوران | نقش | ایمیل |
+|---|---|---|
+| کافه‌رستوران نیلوفر | مدیر | manager@niloofar.test |
+| | گارسون | waiter@niloofar.test، waiter2@niloofar.test |
+| | آشپزخانه | kitchen@niloofar.test |
+| کافه باغ | مدیر | manager@bagh.test |
+| | گارسون | waiter@bagh.test |
+| | آشپزخانه | kitchen@bagh.test |
+
+اجرای دوباره فقط همین دو رستوران را بازسازی می‌کند. قیمت‌ها تقریبی‌اند.
+
 ## آزمون‌ها
 
 (در فاز ۷ اضافه می‌شود.)
