@@ -9,9 +9,12 @@
     "lint": "eslint",
     "test": "vitest run",
     "db:up": "docker compose up -d --wait",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "user:create": "node --env-file=.env.local scripts/create-user.mjs",
+    "smoke:auth": "node --env-file=.env.local scripts/smoke-auth.mjs"
   },
   "dependencies": {
+    "jose": "^6.2.13",
     "next": "16.4.2",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
