@@ -44,6 +44,7 @@ npm run dev                     # http://localhost:3000
 - **تست دودی سفارش:** `npm run seed:min` و بعد `npm run smoke:orders` (سرور باید در حال اجرا باشد). این تست افزودن هم‌زمان، درخواست تکراری، تلاش بین‌رستورانی و مجوزها را بررسی می‌کند.
 - **آشپزخانه و به‌روزرسانی زنده:** `GET /api/kitchen/queue`، `POST /api/order-items/:id/status` (با `from` و `to`) و جریان SSE در `GET /api/events/stream`. جزئیات در DECISIONS.md (D27 تا D32).
 - **تست دودی آشپزخانه:** `npm run smoke:kitchen`.
+- **رابط:** صفحه‌های `/login`، `/tables`، `/orders/:id` و `/kitchen`. هر صفحه با یک هوک (`src/lib/use-live.ts`) از طریق SSE تازه می‌شود، با بازخوانی هنگام اتصال، هر ۳۰ ثانیه و هنگام برگشت تب.
 
 ## ساختار پوشه‌ها
 
