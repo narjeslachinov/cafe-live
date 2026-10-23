@@ -11,7 +11,10 @@
     "db:up": "docker compose up -d --wait",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "user:create": "node --env-file=.env.local scripts/create-user.mjs",
-    "smoke:auth": "node --env-file=.env.local scripts/smoke-auth.mjs"
+    "smoke:auth": "node --env-file=.env.local scripts/smoke-auth.mjs",
+    "seed:min": "node --env-file=.env.local scripts/seed-min.mjs",
+    "smoke:orders": "node --env-file=.env.local scripts/smoke-orders.mjs",
+    "smoke:kitchen": "node --env-file=.env.local scripts/smoke-kitchen.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13",

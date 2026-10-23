@@ -40,6 +40,10 @@ npm run dev                     # http://localhost:3000
 - **لاگ ساخت‌یافته** با Pino و حذف فیلدهای حساس.
 - **احراز هویت:** کوکی HttpOnly امضاشده؛ نقش و فعال بودن عضویت در هر درخواست از دیتابیس خوانده می‌شود. ساخت کاربر: `npm run user:create -- --help` (ببینید پارامترها در `scripts/create-user.mjs`).
 - **تست دودی ورود:** `npm run smoke:auth` (سرور باید در حال اجرا باشد).
+- **هسته سفارش** (`src/server/orders.ts`): باز کردن سفارش، افزودن آیتم، لغو و بستن میز، همه idempotent. جزئیات هم‌زمانی در DECISIONS.md (D20 تا D26).
+- **تست دودی سفارش:** `npm run seed:min` و بعد `npm run smoke:orders` (سرور باید در حال اجرا باشد). این تست افزودن هم‌زمان، درخواست تکراری، تلاش بین‌رستورانی و مجوزها را بررسی می‌کند.
+- **آشپزخانه و به‌روزرسانی زنده:** `GET /api/kitchen/queue`، `POST /api/order-items/:id/status` (با `from` و `to`) و جریان SSE در `GET /api/events/stream`. جزئیات در DECISIONS.md (D27 تا D32).
+- **تست دودی آشپزخانه:** `npm run smoke:kitchen`.
 
 ## ساختار پوشه‌ها
 
