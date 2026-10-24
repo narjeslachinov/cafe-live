@@ -12,7 +12,7 @@ type Item = { id: string; name: string; description: string | null; price_toman:
 type Menu = { categories: { id: string; name: string; items: Item[] }[] };
 
 export default function ManageMenuPage() {
-  const { data, error, reload } = useLive<Menu>("/api/manage/menu");
+  const { data, error, reload } = useLive<Menu>("/api/manage/menu", { events: ["menu_changed"] });
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<Item | null>(null);

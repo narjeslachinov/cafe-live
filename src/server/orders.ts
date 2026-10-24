@@ -23,7 +23,7 @@ export const ITEM_COLS = `id, order_id, menu_item_id, name_snapshot, unit_price_
 
 export async function logEvent(
   client: PoolClient,
-  e: { orderId: string; itemId?: string; type: string; actorId: string; payload?: object },
+  e: { orderId?: string | null; itemId?: string; type: string; actorId: string; payload?: object },
 ) {
   // One writer per restaurant at a time until commit, so event ids become
   // visible in id order and a polling reader can never skip an event.
@@ -34,7 +34,7 @@ export async function logEvent(
   await client.query(
     `INSERT INTO order_events (restaurant_id, order_id, order_item_id, type, payload, actor_id)
      VALUES (app_restaurant_id(), $1, $2, $3, $4, $5)`,
-    [e.orderId, e.itemId ?? null, e.type, JSON.stringify(e.payload ?? {}), e.actorId],
+    [e.orderId ?? null, e.itemId ?? null, e.type, JSON.stringify(e.payload ?? {}), e.actorId],
   );
 }
 

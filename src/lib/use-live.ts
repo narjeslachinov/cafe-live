@@ -6,18 +6,75 @@ import { api, ApiError } from "./client";
 const SAFETY_POLL_MS = 30_000;
 const RECONNECT_MS = 5_000;
 
+type Listener = {
+  onEvent: (type: string) => void;
+  onOpen: () => void;
+  onLost: () => void;
+  onState: (connected: boolean) => void;
+};
+
+// One EventSource per page, shared by every useLive on it.
+const subscribers = new Set<Listener>();
+let source: EventSource | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
+let isConnected = false;
+
+function setConnected(v: boolean) {
+  isConnected = v;
+  subscribers.forEach((s) => s.onState(v));
+}
+
+function ensureSource() {
+  if (source || subscribers.size === 0) return;
+  const es = new EventSource("/api/events/stream");
+  source = es;
+  es.onopen = () => {
+    setConnected(true);
+    subscribers.forEach((s) => s.onOpen()); // anything missed while disconnected is picked up here
+  };
+  es.addEventListener("change", (ev) => {
+    let type = "";
+    try {
+      type = JSON.parse((ev as MessageEvent).data).type ?? "";
+    } catch {}
+    subscribers.forEach((s) => s.onEvent(type));
+  });
+  es.onerror = () => {
+    setConnected(false);
+    if (es.readyState === EventSource.CLOSED) {
+      // The server refused (e.g. session expired). Check, then try again later.
+      es.close();
+      source = null;
+      subscribers.forEach((s) => s.onLost());
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(ensureSource, RECONNECT_MS);
+    }
+    // Otherwise the browser is already reconnecting by itself.
+  };
+}
+
+function releaseSource() {
+  if (subscribers.size > 0) return;
+  clearTimeout(retryTimer);
+  source?.close();
+  source = null;
+  isConnected = false;
+}
+
 /**
- * Loads `path` and keeps it fresh. Events carry no data: any event (or a
+ * Loads `path` and keeps it fresh. Events carry no data: a matching event (or a
  * reconnect, a wake-up, or 30 s of silence) just triggers a re-read, so the
  * screen can never be assembled from half a message.
+ * `events` limits which event types trigger a re-read (default: all of them).
  */
-export function useLive<T>(path: string) {
+export function useLive<T>(path: string, opts?: { events?: string[] }) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(isConnected);
   const inFlight = useRef(false);
   const again = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const eventsKey = opts?.events?.join(",") ?? "";
 
   const load = useCallback(async () => {
     if (inFlight.current) {
@@ -45,6 +102,7 @@ export function useLive<T>(path: string) {
   }, [path]);
 
   useEffect(() => {
+    const filter = eventsKey ? eventsKey.split(",") : null;
     const schedule = (delay: number) => {
       clearTimeout(timer.current);
       timer.current = setTimeout(() => void load(), delay);
@@ -52,30 +110,17 @@ export function useLive<T>(path: string) {
 
     void load();
 
-    let es: EventSource | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    let stopped = false;
-
-    const connect = () => {
-      if (stopped) return;
-      es = new EventSource("/api/events/stream");
-      es.onopen = () => {
-        setConnected(true);
-        schedule(0); // anything missed while disconnected is picked up here
-      };
-      es.addEventListener("change", () => schedule(150));
-      es.onerror = () => {
-        setConnected(false);
-        if (es?.readyState === EventSource.CLOSED) {
-          // The server refused (e.g. session expired). Check, then try again later.
-          es.close();
-          void load();
-          retry = setTimeout(connect, RECONNECT_MS);
-        }
-        // Otherwise the browser is already reconnecting by itself.
-      };
+    const listener: Listener = {
+      onEvent: (type) => {
+        if (!filter || filter.includes(type)) schedule(150);
+      },
+      onOpen: () => schedule(0),
+      onLost: () => void load(),
+      onState: setConnected,
     };
-    connect();
+    subscribers.add(listener);
+    setConnected(isConnected);
+    ensureSource();
 
     const poll = setInterval(() => void load(), SAFETY_POLL_MS);
     const onVisible = () => {
@@ -84,14 +129,13 @@ export function useLive<T>(path: string) {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
-      stopped = true;
-      es?.close();
-      clearTimeout(retry);
+      subscribers.delete(listener);
+      releaseSource();
       clearTimeout(timer.current);
       clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load]);
+  }, [load, eventsKey]);
 
   return { data, error, connected, reload: load };
 }

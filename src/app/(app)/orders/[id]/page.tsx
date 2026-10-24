@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LiveDot } from "@/components/live-dot";
 import { Sheet } from "@/components/sheet";
 import { StatusBadge } from "@/components/status-badge";
@@ -35,25 +35,12 @@ export default function OrderPage() {
   const { role } = useSession();
   const { data, error, connected, reload } = useLive<OrderData>(`/api/orders/${id}`);
 
-  const [menu, setMenu] = useState<Menu | null>(null);
+  const { data: menu, error: menuError } = useLive<Menu>("/api/menu", { events: ["menu_changed"] });
   const [cat, setCat] = useState<string | null>(null);
   const [picked, setPicked] = useState<MenuItem | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    api<Menu>("GET", "/api/menu")
-      .then((m) => {
-        if (!alive) return;
-        setMenu(m);
-        setCat(m.categories[0]?.id ?? null);
-      })
-      .catch((e) => toast(errorMessage(e), "error"));
-    return () => {
-      alive = false;
-    };
-  }, [toast]);
 
   async function act(itemId: string, call: () => Promise<unknown>) {
     setBusyId(itemId);
@@ -103,7 +90,8 @@ export default function OrderPage() {
   }
 
   const open = data.order.status === "open";
-  const visibleMenu = menu?.categories.find((c) => c.id === cat)?.items ?? [];
+  const activeCat = menu?.categories.find((c) => c.id === cat) ?? menu?.categories[0];
+  const visibleMenu = activeCat?.items ?? [];
   const toServe = data.items.filter((i) => i.status === "ready").length;
   const toCancel = data.items.filter((i) => i.status === "new" || i.status === "preparing").length;
 
@@ -180,15 +168,16 @@ export default function OrderPage() {
       {open && (
         <section aria-label="منو">
           <h2 className="mb-2 font-bold">افزودن آیتم</h2>
-          {!menu && <p className="text-stone-500">در حال بارگذاری منو…</p>}
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {!menu && (
+              <p className="text-stone-500">{menuError ? "منو بارگذاری نشد." : "در حال بارگذاری منو…"}</p>
+            )}          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
             {menu?.categories.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setCat(c.id)}
-                aria-pressed={cat === c.id}
+                aria-pressed={activeCat?.id === c.id}
                 className={`min-h-11 whitespace-nowrap rounded-full px-4 text-sm ${
-                  cat === c.id ? "bg-amber-600 text-white" : "border border-stone-300 bg-white"
+                  activeCat?.id === c.id ? "bg-amber-600 text-white" : "border border-stone-300 bg-white"
                 }`}
               >
                 {c.name}

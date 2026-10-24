@@ -29,8 +29,7 @@ export const POST = route(async (req) => {
   const s = await requireSession(["manager"]);
   const { items } = body.parse(await req.json().catch(() => null));
 
-  const r = await withTenant(s.restaurantId, (c) => commitItems(c, items));
-  logger.info(
+  const r = await withTenant(s.restaurantId, (c) => commitItems(c, items, s.userId));  logger.info(
     { event: "menu_import_commit", created: r.created, skipped: r.skipped.length, userId: s.userId, restaurantId: s.restaurantId },
     "menu import committed",
   );

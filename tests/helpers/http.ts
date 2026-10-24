@@ -47,7 +47,7 @@ export async function login(email: string, password = PASSWORD): Promise<Api> {
 export type SseEvent = {
   id: string | null;
   event: string;
-  data: { type: string; orderId: string; itemId: string | null };
+  data: { type: string; orderId: string | null; itemId: string | null };
 };
 
 export async function openStream(cookie: string, after?: number | string, headers: Record<string, string> = {}) {

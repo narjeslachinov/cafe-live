@@ -3,7 +3,7 @@ import { withTenant } from "./db";
 export type EventRow = {
   id: string;
   type: string;
-  order_id: string;
+  order_id: string | null;
   order_item_id: string | null;
 };
 

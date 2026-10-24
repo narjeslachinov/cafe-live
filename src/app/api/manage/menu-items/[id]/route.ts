@@ -22,8 +22,7 @@ export const POST = route<Ctx>(async (req, ctx) => {
   const input = body.parse(await req.json().catch(() => null));
 
   const row = await withTenant(s.restaurantId, (c) =>
-    updateMenuItem(c, { id, price: input.price_toman, available: input.is_available }),
-  );
+    updateMenuItem(c, { id, price: input.price_toman, available: input.is_available, userId: s.userId }),  );
   // Menu changes have no event table yet: this log line is the audit trail.
   logger.info(
     {

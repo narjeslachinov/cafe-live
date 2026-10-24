@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { HttpError } from "./http";
+import { logEvent } from "./orders";
 
 export type ManagedItem = {
   id: string;
@@ -32,7 +33,7 @@ export async function listMenuForManager(client: PoolClient) {
 
 export async function updateMenuItem(
   client: PoolClient,
-  p: { id: string; price?: number; available?: boolean },
+  p: { id: string; price?: number; available?: boolean; userId: string },
 ) {
   const r = await client.query(
     `WITH old AS (
@@ -47,15 +48,31 @@ export async function updateMenuItem(
                 old.price_toman AS old_price, old.is_available AS old_available`,
     [p.id, p.price ?? null, p.available ?? null],
   );
-  if (!r.rows[0]) throw new HttpError(404, "Menu item not found", "menu_item_not_found");
-  return r.rows[0];
+  const row = r.rows[0];
+  if (!row) throw new HttpError(404, "Menu item not found", "menu_item_not_found");
+
+  // Saving the same values again changes nothing, so it announces nothing.
+  if (row.old_price !== row.price_toman || row.old_available !== row.is_available) {
+    await logEvent(client, {
+      type: "menu_changed",
+      actorId: p.userId,
+      payload: {
+        itemId: p.id,
+        oldPrice: row.old_price,
+        newPrice: row.price_toman,
+        oldAvailable: row.old_available,
+        newAvailable: row.is_available,
+      },
+    });
+  }
+  return row;
 }
 
 export type NewItem = { category: string; name: string; description?: string | null; price_toman: number };
 
 /** Adds items; names that already exist are skipped, so sending the same batch twice is harmless. */
-export async function commitItems(client: PoolClient, input: NewItem[]) {
-  // A fixed order keeps two imports running together from deadlocking on category creation.
+export async function commitItems(client: PoolClient, input: NewItem[], userId: string) {
+      // A fixed order keeps two imports running together from deadlocking on category creation.
   const items = [...input].sort(
     (a, b) => a.category.toLowerCase().localeCompare(b.category.toLowerCase()) || a.name.localeCompare(b.name),
   );
@@ -89,6 +106,9 @@ export async function commitItems(client: PoolClient, input: NewItem[]) {
     );
     if (ins.rows[0]) created++;
     else skipped.push(it.name);
+  }
+   if (created > 0) {
+    await logEvent(client, { type: "menu_changed", actorId: userId, payload: { added: created } });
   }
   return { created, skipped };
 }
