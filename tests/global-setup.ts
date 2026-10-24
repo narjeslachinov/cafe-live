@@ -26,6 +26,9 @@ async function warmUp() {
     ["POST", `/api/orders/${ZERO}/close`], ["POST", `/api/order-items/${ZERO}/cancel`],
     ["POST", `/api/order-items/${ZERO}/status`], ["GET", "/api/kitchen/queue"],
     ["GET", "/api/events/stream"],
+    ["GET", "/api/manage/menu"], ["POST", `/api/manage/menu-items/${ZERO}`],
+    ["POST", "/api/manage/menu-import/draft"], ["POST", "/api/manage/menu-import/commit"],
+    ["POST", `/api/orders/${ZERO}/force-close`],
   ];
   await Promise.all(
     targets.map(([method, p]) =>
@@ -65,6 +68,8 @@ export async function setup() {
     LOG_LEVEL: "warn",
     NODE_ENV: "development",
     NEXT_TELEMETRY_DISABLED: "1",
+    AI_PROVIDER: "mock",
+    AI_TIMEOUT_MS: "1500",
   };
   for (const k of Object.keys(env)) if (k.startsWith("VITEST")) delete env[k];
 

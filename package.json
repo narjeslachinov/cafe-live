@@ -15,7 +15,8 @@
     "seed:min": "node --env-file=.env.local scripts/seed-min.mjs",
     "smoke:orders": "node --env-file=.env.local scripts/smoke-orders.mjs",
     "smoke:kitchen": "node --env-file=.env.local scripts/smoke-kitchen.mjs",
-    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs"
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
+    "smoke:ai": "node --env-file=.env.local scripts/smoke-ai.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13",

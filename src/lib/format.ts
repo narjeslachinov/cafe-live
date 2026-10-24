@@ -16,3 +16,13 @@ export const STATUS_LABEL: Record<string, string> = {
   served: "سرو شد",
   cancelled: "لغو شد",
 };
+export const faToEn = (s: string) =>
+  s
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+/** "۱۸۵٬۰۰۰" or "185,000" -> 185000; anything else -> null. */
+export function parseToman(input: string): number | null {
+  const s = faToEn(input).replace(/[,٬،\s]/g, "");
+  return /^\d+$/.test(s) ? Number(s) : null;
+}

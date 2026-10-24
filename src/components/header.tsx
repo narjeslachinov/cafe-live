@@ -15,6 +15,9 @@ export function Header() {
     ...(role !== "kitchen"
       ? [{ href: "/tables", label: "میزها", match: ["/tables", "/orders"] }]
       : []),
+    ...(role === "manager"
+       ? [{ href: "/menu", label: "منو", match: ["/menu"] }] 
+       : []),
     { href: "/kitchen", label: "آشپزخانه", match: ["/kitchen"] },
   ];
 

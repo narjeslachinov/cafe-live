@@ -10,6 +10,7 @@ import { useToast } from "@/components/toast";
 import { api, ApiError, errorMessage, uuid } from "@/lib/client";
 import { fmtNum, fmtToman } from "@/lib/format";
 import { useLive } from "@/lib/use-live";
+import { useSession } from "@/components/session";
 
 type Item = {
   id: string;
@@ -31,6 +32,7 @@ export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const { role } = useSession();
   const { data, error, connected, reload } = useLive<OrderData>(`/api/orders/${id}`);
 
   const [menu, setMenu] = useState<Menu | null>(null);
@@ -75,6 +77,16 @@ export default function OrderPage() {
       void reload();
     }
   }
+  async function forceClose() {
+    try {
+      await api("POST", `/api/orders/${id}/force-close`, {});
+      router.push("/tables");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+      setConfirmClose(false);
+      void reload();
+    }
+  }
 
   if (error?.status === 404) {
     return (
@@ -92,6 +104,8 @@ export default function OrderPage() {
 
   const open = data.order.status === "open";
   const visibleMenu = menu?.categories.find((c) => c.id === cat)?.items ?? [];
+  const toServe = data.items.filter((i) => i.status === "ready").length;
+  const toCancel = data.items.filter((i) => i.status === "new" || i.status === "preparing").length;
 
   return (
     <div>
@@ -235,6 +249,16 @@ export default function OrderPage() {
           <p className="mb-4 text-sm text-stone-600">
             فقط وقتی همهٔ آیتم‌ها سرو یا لغو شده‌اند میز بسته می‌شود.
           </p>
+          {role === "manager" && toServe + toCancel > 0 && (
+            <div className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">
+              <p className="mb-2">
+                {fmtNum(toServe + toCancel)} آیتم هنوز تمام نشده است. با «بستن اجباری»، {fmtNum(toServe)} آیتم آماده «سرو شده» و {fmtNum(toCancel)} آیتم دیگر «لغو» می‌شوند. این کار قابل‌برگشت نیست.
+              </p>
+              <button onClick={forceClose} className="min-h-11 w-full rounded-xl border border-red-400 font-semibold text-red-700">
+                بستن اجباری
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={closeTable}

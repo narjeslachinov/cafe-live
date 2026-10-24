@@ -236,3 +236,51 @@ export async function getOrder(client: PoolClient, orderId: string) {
 
   return { order: o.rows[0], items: items.rows, total_toman: total };
 }
+/**
+ * Manager only. Closes a table that cannot be closed normally.
+ * Ready items are treated as served (the waiter forgot the tap); new and
+ * in-preparation items are cancelled. Every change is logged as "forced".
+ */
+export async function forceCloseOrder(client: PoolClient, p: { orderId: string; userId: string }) {
+  const o = await client.query<{ status: string }>(
+    `SELECT status FROM orders WHERE id = $1 FOR UPDATE`,
+    [p.orderId],
+  );
+  if (!o.rows[0]) throw new HttpError(404, "Order not found", "order_not_found");
+  if (o.rows[0].status === "closed") return { closed: false, served: 0, cancelled: 0 }; // idempotent
+  if (o.rows[0].status !== "open") throw new HttpError(409, "Order is not open", "order_not_open");
+
+  const moved = await client.query<{ id: string; was: string; to_status: string }>(
+    `WITH old AS (
+       SELECT id, status FROM order_items
+        WHERE order_id = $1 AND status IN ('new', 'preparing', 'ready') FOR UPDATE
+     )
+     UPDATE order_items i
+        SET status = CASE WHEN old.status = 'ready' THEN 'served'::item_status ELSE 'cancelled'::item_status END,
+            version = i.version + 1, updated_at = now()
+       FROM old
+      WHERE i.id = old.id
+      RETURNING i.id, old.status::text AS was, i.status::text AS to_status`,
+    [p.orderId],
+  );
+  for (const r of moved.rows) {
+    await logEvent(client, {
+      orderId: p.orderId,
+      itemId: r.id,
+      type: r.to_status === "served" ? "item_status_changed" : "item_cancelled",
+      actorId: p.userId,
+      payload: { forced: true, from: r.was, to: r.to_status },
+    });
+  }
+
+  await client.query(`UPDATE orders SET status = 'closed', closed_at = now() WHERE id = $1`, [p.orderId]);
+  const served = moved.rows.filter((r) => r.to_status === "served").length;
+  const cancelled = moved.rows.length - served;
+  await logEvent(client, {
+    orderId: p.orderId,
+    type: "order_closed",
+    actorId: p.userId,
+    payload: { forced: true, served, cancelled },
+  });
+  return { closed: true, served, cancelled };
+}

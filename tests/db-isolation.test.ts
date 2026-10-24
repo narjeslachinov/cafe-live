@@ -5,7 +5,7 @@ import { admin, appClient, asTenant, createRestaurant, type Fixture } from "./he
 
 const TENANT_TABLES = [
   "restaurants", "memberships", "dining_tables", "menu_categories",
-  "menu_items", "orders", "order_items", "order_events",
+  "menu_items", "orders", "order_items", "order_events","ai_requests",
 ];
 
 let A: Fixture;
@@ -32,6 +32,10 @@ beforeAll(async () => {
       await c.query(
         "INSERT INTO order_events (restaurant_id, order_id, type, actor_id) VALUES ($1, $2, 'order_opened', $3)",
         [f.id, o.rows[0].id, f.userIds.waiter],
+      );
+      await c.query(
+        "INSERT INTO ai_requests (restaurant_id, user_id, feature, provider, input_chars) VALUES ($1, $2, 'menu_import', 'mock', 10)",
+        [f.id, f.userIds.manager],
       );
       return { orderId: o.rows[0].id, requestId };
     });
